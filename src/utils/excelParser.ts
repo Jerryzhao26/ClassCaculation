@@ -170,5 +170,5 @@ export function generateAndDownloadExcelTemplate(
     XLSX.utils.book_append_sheet(wb, ws, c.className.substring(0, 31)); // Sheet name max length 31
   });
 
-  XLSX.writeFile(wb, `智学教务_多班级月度考勤模版_${month}.xlsx`);
+  XLSX.writeFile(wb, `珞珞的珈课销_多班级月度考勤模版_${month}.xlsx`);
 }
