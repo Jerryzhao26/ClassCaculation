@@ -1,0 +1,273 @@
+import React, { useState, useEffect } from 'react';
+import {
+  StudentEnrollment,
+  ClassMonthlyAttendance,
+  ClassTypeConfig
+} from './types';
+import {
+  INITIAL_CLASS_TYPES,
+  INITIAL_STUDENTS,
+  INITIAL_ATTENDANCE_SHEETS
+} from './initialData';
+import { calculateStudentSettlement } from './utils/calc';
+import { Navbar } from './components/Navbar';
+import { Dashboard } from './components/Dashboard';
+import { AttendanceManager } from './components/AttendanceManager';
+import { StudentManager } from './components/StudentManager';
+import { ClassTypeManager } from './components/ClassTypeManager';
+import { SettlementReport } from './components/SettlementReport';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedMonth, setSelectedMonth] = useState('2026-08');
+  const [currentClassName, setCurrentClassName] = useState('英语高级班');
+
+  // Persistence State
+  const [classTypes, setClassTypes] = useState<ClassTypeConfig[]>(() => {
+    const saved = localStorage.getItem('zhixue_class_types');
+    return saved ? JSON.parse(saved) : INITIAL_CLASS_TYPES;
+  });
+
+  const [students, setStudents] = useState<StudentEnrollment[]>(() => {
+    const saved = localStorage.getItem('zhixue_students');
+    return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
+  });
+
+  const [attendanceSheets, setAttendanceSheets] = useState<ClassMonthlyAttendance[]>(() => {
+    const saved = localStorage.getItem('zhixue_attendance_sheets');
+    return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE_SHEETS;
+  });
+
+  // Save to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('zhixue_class_types', JSON.stringify(classTypes));
+  }, [classTypes]);
+
+  useEffect(() => {
+    localStorage.setItem('zhixue_students', JSON.stringify(students));
+  }, [students]);
+
+  useEffect(() => {
+    localStorage.setItem('zhixue_attendance_sheets', JSON.stringify(attendanceSheets));
+  }, [attendanceSheets]);
+
+  // Export Local Backup JSON
+  const handleExportBackup = () => {
+    const backupData = {
+      appName: '智学教务·课销核算系统',
+      version: '1.0',
+      exportTime: new Date().toLocaleString(),
+      selectedMonth,
+      classTypes,
+      students,
+      attendanceSheets
+    };
+
+    const jsonStr = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `智学教务全量数据备份_${selectedMonth}_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Import Local Backup JSON
+  const handleImportBackup = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const data = JSON.parse(content);
+        let restoredCount = 0;
+
+        if (data.students && Array.isArray(data.students)) {
+          setStudents(data.students);
+          restoredCount += data.students.length;
+        }
+        if (data.classTypes && Array.isArray(data.classTypes)) {
+          setClassTypes(data.classTypes);
+        }
+        if (data.attendanceSheets && Array.isArray(data.attendanceSheets)) {
+          setAttendanceSheets(data.attendanceSheets);
+        }
+        if (data.selectedMonth) {
+          setSelectedMonth(data.selectedMonth);
+        }
+
+        alert(`数据备份成功恢复！已同步 ${restoredCount} 条学生档案与相关月度考勤表。`);
+      } catch (err: any) {
+        alert(`解析备份文件失败: ${err?.message || '文件格式不正确'}`);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Reset Demo Data
+  const handleResetDemoData = () => {
+    if (confirm('是否重置恢复系统示例考勤与学生学费数据？')) {
+      setClassTypes(INITIAL_CLASS_TYPES);
+      setStudents(INITIAL_STUDENTS);
+      setAttendanceSheets(INITIAL_ATTENDANCE_SHEETS);
+      setSelectedMonth('2026-08');
+      setCurrentClassName('英语高级班');
+      localStorage.removeItem('zhixue_class_types');
+      localStorage.removeItem('zhixue_students');
+      localStorage.removeItem('zhixue_attendance_sheets');
+    }
+  };
+
+  // Handlers for Student CRUD
+  const handleAddStudent = (newStudent: StudentEnrollment) => {
+    setStudents((prev) => [newStudent, ...prev]);
+  };
+
+  const handleBatchAddStudents = (newStudents: StudentEnrollment[]) => {
+    setStudents((prev) => [...newStudents, ...prev]);
+  };
+
+  const handleUpdateStudent = (updated: StudentEnrollment) => {
+    setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+  };
+
+  const handleDeleteStudent = (id: string) => {
+    setStudents((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  // Handlers for Class Type CRUD
+  const handleAddClassType = (newClass: ClassTypeConfig) => {
+    setClassTypes((prev) => [...prev, newClass]);
+  };
+
+  const handleUpdateClassType = (updated: ClassTypeConfig) => {
+    setClassTypes((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+  };
+
+  const handleDeleteClassType = (id: string) => {
+    setClassTypes((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  // Handlers for Attendance Save
+  const handleSaveAttendanceSheet = (savedSheet: ClassMonthlyAttendance) => {
+    setAttendanceSheets((prev) => {
+      const index = prev.findIndex(
+        (s) => s.month === savedSheet.month && s.className === savedSheet.className
+      );
+      if (index >= 0) {
+        const updated = [...prev];
+        updated[index] = savedSheet;
+        return updated;
+      }
+      return [savedSheet, ...prev];
+    });
+  };
+
+  const handleSaveMultipleSheets = (savedSheets: ClassMonthlyAttendance[]) => {
+    setAttendanceSheets((prev) => {
+      let updated = [...prev];
+      savedSheets.forEach((sheet) => {
+        const index = updated.findIndex(
+          (s) => s.month === sheet.month && s.className === sheet.className
+        );
+        if (index >= 0) {
+          updated[index] = sheet;
+        } else {
+          updated.unshift(sheet);
+        }
+      });
+      return updated;
+    });
+  };
+
+  // Navigation Helper
+  const handleNavigateTab = (tab: string, className?: string) => {
+    if (className) {
+      setCurrentClassName(className);
+    }
+    setActiveTab(tab);
+  };
+
+  // Low balance student count for badge
+  const lowBalanceCount = students.filter(
+    (s) => s.status === 'active' && calculateStudentSettlement(s, selectedMonth, attendanceSheets).isLowBalance
+  ).length;
+
+  return (
+    <div className="min-h-screen bg-slate-100/70 text-slate-900 font-sans antialiased flex flex-col selection:bg-indigo-500 selection:text-white">
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        onResetDemoData={handleResetDemoData}
+        onExportBackup={handleExportBackup}
+        onImportBackup={handleImportBackup}
+        lowBalanceCount={lowBalanceCount}
+      />
+
+      <main className="flex-1 pb-16">
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            students={students}
+            attendanceSheets={attendanceSheets}
+            classTypes={classTypes}
+            selectedMonth={selectedMonth}
+            onNavigateTab={handleNavigateTab}
+          />
+        )}
+
+        {activeTab === 'attendance' && (
+          <AttendanceManager
+            students={students}
+            attendanceSheets={attendanceSheets}
+            classTypes={classTypes}
+            selectedMonth={selectedMonth}
+            currentClassName={currentClassName}
+            setCurrentClassName={setCurrentClassName}
+            onSaveSheet={handleSaveAttendanceSheet}
+            onSaveMultipleSheets={handleSaveMultipleSheets}
+            onNavigateTab={handleNavigateTab}
+          />
+        )}
+
+        {activeTab === 'settlement' && (
+          <SettlementReport
+            students={students}
+            attendanceSheets={attendanceSheets}
+            classTypes={classTypes}
+            selectedMonth={selectedMonth}
+          />
+        )}
+
+        {activeTab === 'students' && (
+          <StudentManager
+            students={students}
+            classTypes={classTypes}
+            attendanceSheets={attendanceSheets}
+            selectedMonth={selectedMonth}
+            onAddStudent={handleAddStudent}
+            onBatchAddStudents={handleBatchAddStudents}
+            onUpdateStudent={handleUpdateStudent}
+            onDeleteStudent={handleDeleteStudent}
+          />
+        )}
+
+        {activeTab === 'classes' && (
+          <ClassTypeManager
+            classTypes={classTypes}
+            onAddClassType={handleAddClassType}
+            onUpdateClassType={handleUpdateClassType}
+            onDeleteClassType={handleDeleteClassType}
+          />
+        )}
+      </main>
+
+      <footer className="bg-slate-900 text-slate-400 text-xs py-4 px-6 text-center border-t border-slate-800 print:hidden">
+        <p>智学教务 · 小型培训机构多班型课销精算管理系统 © 2026</p>
+      </footer>
+    </div>
+  );
+}

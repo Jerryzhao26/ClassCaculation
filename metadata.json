@@ -1,0 +1,6 @@
+{
+  "name": "培训机构月度课销核算系统",
+  "description": "小型培训机构月度课销与考勤核算系统，支持学生报名录入、班型单价计算、智能考勤表识别（图片/Excel）、月度消课自动核算与剩余课时预警。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
