@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="font-bold text-lg tracking-tight text-slate-900">智学教务 · 课销核算系统</h1>
+                <h1 className="font-bold text-lg tracking-tight text-slate-900">珞珞的珈课销核算系统</h1>
                 <span className="px-2.5 py-0.5 text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full">
                   月度阶段精算版
                 </span>

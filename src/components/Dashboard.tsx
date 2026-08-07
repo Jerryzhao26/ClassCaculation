@@ -100,7 +100,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
 
   const handleCopyNotice = (studentName: string, className: string, remainingLessons: number) => {
-    const text = `【智学教务提醒】家长您好，${studentName}同学在《${className}》课程的剩余课时仅剩 ${remainingLessons} 节。为保证孩子顺利跟班上课，请及时联系老师办理续费，感谢您的支持！`;
+    const text = `【珞珞的珈课销提醒】家长您好，${studentName}同学在《${className}》课程的剩余课时仅剩 ${remainingLessons} 节。为保证孩子顺利跟班上课，请及时联系老师办理续费，感谢您的支持！`;
     navigator.clipboard.writeText(text);
     setCopiedId(studentName);
     setTimeout(() => setCopiedId(null), 2500);

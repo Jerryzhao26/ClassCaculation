@@ -65,7 +65,7 @@ export default function App() {
   // Export Local Backup JSON
   const handleExportBackup = () => {
     const backupData = {
-      appName: '智学教务·课销核算系统',
+      appName: '珞珞的珈课销核算系统',
       version: '1.0',
       exportTime: new Date().toLocaleString(),
       selectedMonth,
@@ -79,7 +79,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `智学教务全量数据备份_${selectedMonth}_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `珞珞的珈课销核算系统_全量数据备份_${selectedMonth}_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -310,7 +310,7 @@ export default function App() {
       </main>
 
       <footer className="bg-slate-900 text-slate-400 text-xs py-4 px-6 text-center border-t border-slate-800 print:hidden">
-        <p>智学教务 · 小型培训机构多班型课销精算管理系统 © 2026</p>
+        <p>珞珞的珈课销核算系统 · 班型课销精算管理 © 2026</p>
       </footer>
 
       {/* Confirmation Modal for System Initialization */}

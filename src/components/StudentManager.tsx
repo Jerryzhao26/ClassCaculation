@@ -15,7 +15,9 @@ import {
   X,
   CreditCard,
   Plus,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Receipt,
+  RotateCcw
 } from 'lucide-react';
 
 interface StudentManagerProps {
@@ -53,6 +55,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
   const [topUpTarget, setTopUpTarget] = useState<StudentEnrollment | null>(null);
   const [topUpFee, setTopUpFee] = useState<number>(3600);
   const [topUpLessons, setTopUpLessons] = useState<number>(20);
+
+  // Refund Modal State
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundTarget, setRefundTarget] = useState<StudentEnrollment | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -200,6 +206,40 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
     setShowTopUpModal(false);
     setTopUpTarget(null);
     alert(`成功为【${topUpTarget.studentName}】续费增加 ${topUpLessons} 课时！`);
+  };
+
+  // Refund Action
+  const handleOpenRefund = (student: StudentEnrollment) => {
+    const settlement = calculateStudentSettlement(student, selectedMonth, attendanceSheets);
+    if (settlement.remainingLessons <= 0) {
+      alert(`学员【${student.studentName}】当前剩余课时为 0 节，已被清零或无剩余学费。`);
+      return;
+    }
+    setRefundTarget(student);
+    setShowRefundModal(true);
+  };
+
+  const handleConfirmRefund = () => {
+    if (!refundTarget) return;
+
+    const settlement = calculateStudentSettlement(refundTarget, selectedMonth, attendanceSheets);
+    const consumed = settlement.cumulativeConsumedLessons;
+    const refundLessons = settlement.remainingLessons;
+    const refundBalance = settlement.remainingBalance;
+
+    const newTuitionFee = Math.round(consumed * refundTarget.unitPrice * 100) / 100;
+    const updated: StudentEnrollment = {
+      ...refundTarget,
+      totalLessons: consumed, // 将总购课次调整为已核销课时，剩余课时自动归零
+      tuitionFee: newTuitionFee, // 缴纳学费调整为已销学费
+      status: 'graduated', // 标记为结清/退费
+      note: `${refundTarget.note || ''} (于${new Date().toLocaleDateString()}办理缺勤退费: 清退剩余${refundLessons}节课时，应退款¥${refundBalance})`.trim()
+    };
+
+    onUpdateStudent(updated);
+    setShowRefundModal(false);
+    setRefundTarget(null);
+    alert(`已成功为【${refundTarget.studentName}】办理缺勤退费！\n清退剩余 ${refundLessons} 节课时，退款金额 ¥${refundBalance.toLocaleString()} 元，剩余课时与学费已归零。`);
   };
 
   // Filter students
@@ -376,17 +416,24 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                       ¥{settlement.remainingBalance.toLocaleString()}
                     </td>
 
-                    <td className="py-4 px-6 text-center space-x-2">
+                    <td className="py-4 px-6 text-center space-x-1.5">
                       <button
                         onClick={() => handleOpenTopUp(student)}
-                        className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition"
+                        className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1.5 rounded-lg border border-emerald-200 transition cursor-pointer"
                         title="续费加报课时"
                       >
                         续费
                       </button>
                       <button
+                        onClick={() => handleOpenRefund(student)}
+                        className="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2 py-1.5 rounded-lg border border-rose-200 transition cursor-pointer"
+                        title="缺勤退费处理，剩余课时与学费清零"
+                      >
+                        退费
+                      </button>
+                      <button
                         onClick={() => handleOpenEditModal(student)}
-                        className="text-slate-400 hover:text-indigo-600 transition p-1"
+                        className="text-slate-400 hover:text-indigo-600 transition p-1 cursor-pointer"
                         title="编辑资料"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -397,7 +444,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                             onDeleteStudent(student.id);
                           }
                         }}
-                        className="text-slate-400 hover:text-rose-600 transition p-1"
+                        className="text-slate-400 hover:text-rose-600 transition p-1 cursor-pointer"
                         title="删除记录"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -644,6 +691,75 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Quick Refund Modal */}
+      {showRefundModal && refundTarget && (() => {
+        const settlement = calculateStudentSettlement(refundTarget, selectedMonth, attendanceSheets);
+        return (
+          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center space-x-2 text-rose-600 font-bold text-base">
+                  <Receipt className="w-5 h-5 text-rose-500" />
+                  <span>【{refundTarget.studentName}】缺勤退费与剩余清零</span>
+                </div>
+                <button onClick={() => setShowRefundModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-3.5 bg-rose-50 rounded-xl border border-rose-200/80 text-rose-800 text-xs leading-relaxed font-medium">
+                点击确认退费后，系统将把该学员购买总课次调整为实际已消课时（<strong>{settlement.cumulativeConsumedLessons}节</strong>），将剩余课时（<strong>{settlement.remainingLessons}节</strong>）与剩余学费池（<strong>¥{settlement.remainingBalance.toLocaleString()}</strong>）彻底清零归零。
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2 text-xs text-slate-700">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">报读班级:</span>
+                  <span className="font-bold text-slate-900">{refundTarget.className} ({refundTarget.subject})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">课程绑定单价:</span>
+                  <span className="font-bold text-indigo-700">¥{refundTarget.unitPrice} / 节</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">原始缴纳学费:</span>
+                  <span>¥{refundTarget.tuitionFee} (共 {refundTarget.totalLessons} 节)</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-2">
+                  <span className="text-slate-500">截止当前累计已消课时:</span>
+                  <span className="font-bold text-emerald-600">{settlement.cumulativeConsumedLessons} 节 (对应课销学费 ¥{Math.round(settlement.cumulativeConsumedLessons * refundTarget.unitPrice)})</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-slate-200 pt-2 font-bold">
+                  <span className="text-rose-700 font-extrabold">拟清退剩余课时:</span>
+                  <span className="text-rose-700 font-extrabold text-sm">{settlement.remainingLessons} 节</span>
+                </div>
+                <div className="flex justify-between items-center bg-rose-100/70 p-2.5 rounded-lg border border-rose-200">
+                  <span className="text-rose-900 font-black text-xs">拟退还学费总额:</span>
+                  <span className="text-rose-700 font-black text-lg">¥{settlement.remainingBalance.toLocaleString()} 元</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowRefundModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold text-xs cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRefund}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-xs shadow-md shadow-rose-600/30 flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Receipt className="w-4 h-4" />
+                  <span>确认退费并清零</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Excel Student Import Modal */}
       <StudentExcelImportModal
