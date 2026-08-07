@@ -16,11 +16,22 @@ import { AttendanceManager } from './components/AttendanceManager';
 import { StudentManager } from './components/StudentManager';
 import { ClassTypeManager } from './components/ClassTypeManager';
 import { SettlementReport } from './components/SettlementReport';
+import { ConfirmModal } from './components/ConfirmModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [currentClassName, setCurrentClassName] = useState('英语高级班');
+  const [isInitModalOpen, setIsInitModalOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Auto hide toast
+  useEffect(() => {
+    if (toastMsg) {
+      const timer = setTimeout(() => setToastMsg(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMsg]);
 
   // Persistence State
   const [classTypes, setClassTypes] = useState<ClassTypeConfig[]>(() => {
@@ -106,18 +117,20 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  // Reset Demo Data
-  const handleResetDemoData = () => {
-    if (confirm('是否重置恢复系统示例考勤与学生学费数据？')) {
-      setClassTypes(INITIAL_CLASS_TYPES);
-      setStudents(INITIAL_STUDENTS);
-      setAttendanceSheets(INITIAL_ATTENDANCE_SHEETS);
-      setSelectedMonth('2026-08');
-      setCurrentClassName('英语高级班');
-      localStorage.removeItem('zhixue_class_types');
-      localStorage.removeItem('zhixue_students');
-      localStorage.removeItem('zhixue_attendance_sheets');
-    }
+  // Initialize (Clear All Existing Data)
+  const handleInitializeData = () => {
+    setIsInitModalOpen(true);
+  };
+
+  const executeInitializeData = () => {
+    setClassTypes([]);
+    setStudents([]);
+    setAttendanceSheets([]);
+    setCurrentClassName('');
+    localStorage.setItem('zhixue_class_types', JSON.stringify([]));
+    localStorage.setItem('zhixue_students', JSON.stringify([]));
+    localStorage.setItem('zhixue_attendance_sheets', JSON.stringify([]));
+    setToastMsg('系统已被初始化，已有学生、班型和考勤数据已全部清空。');
   };
 
   // Handlers for Student CRUD
@@ -202,7 +215,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
-        onResetDemoData={handleResetDemoData}
+        onInitializeData={handleInitializeData}
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
         lowBalanceCount={lowBalanceCount}
@@ -268,6 +281,23 @@ export default function App() {
       <footer className="bg-slate-900 text-slate-400 text-xs py-4 px-6 text-center border-t border-slate-800 print:hidden">
         <p>智学教务 · 小型培训机构多班型课销精算管理系统 © 2026</p>
       </footer>
+
+      {/* Confirmation Modal for System Initialization */}
+      <ConfirmModal
+        isOpen={isInitModalOpen}
+        onClose={() => setIsInitModalOpen(false)}
+        onConfirm={executeInitializeData}
+        title="初始化系统确认"
+        description="确定要初始化系统并清空所有已有数据吗？此操作将彻底删除所有已录入的学生档案、学费缴费记录、班型单价配置以及各月份考勤销课记录，清空后数据无法恢复。"
+      />
+
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center space-x-2 animate-bounce">
+          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>{toastMsg}</span>
+        </div>
+      )}
     </div>
   );
 }

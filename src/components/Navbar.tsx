@@ -5,7 +5,7 @@ import {
   UserCheck,
   BookOpen,
   FileSpreadsheet,
-  RotateCcw,
+  Trash2,
   Sparkles,
   School,
   Download,
@@ -18,7 +18,7 @@ interface NavbarProps {
   setActiveTab: (tab: string) => void;
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
-  onResetDemoData: () => void;
+  onInitializeData: () => void;
   onExportBackup: () => void;
   onImportBackup: (file: File) => void;
   lowBalanceCount: number;
@@ -29,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   selectedMonth,
   setSelectedMonth,
-  onResetDemoData,
+  onInitializeData,
   onExportBackup,
   onImportBackup,
   lowBalanceCount,
@@ -105,12 +105,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             <button
-              onClick={onResetDemoData}
-              title="重置恢复演示数据"
-              className="flex items-center space-x-1 text-xs text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1.5 rounded-full transition font-medium"
+              onClick={onInitializeData}
+              title="初始化系统，清空所有已有数据"
+              className="flex items-center space-x-1.5 text-xs text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-full border border-rose-200/80 transition font-bold shadow-2xs cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">重置样例</span>
+              <Trash2 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+              <span>初始化系统</span>
             </button>
           </div>
         </div>
