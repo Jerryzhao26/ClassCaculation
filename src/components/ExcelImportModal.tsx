@@ -39,6 +39,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   const [parsedSheets, setParsedSheets] = useState<ParsedSheetData[]>([]);
   const [selectedSheetIndices, setSelectedSheetIndices] = useState<number[]>([]);
   const [activeSheetTab, setActiveSheetTab] = useState(0);
+  const [sheetCosts, setSheetCosts] = useState<Record<number, number>>({});
 
   if (!isOpen) return null;
 
@@ -56,11 +57,19 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
         setErrorMsg('未能解析到有效考勤Sheet页，请检查Excel文件格式。');
         setParsedSheets([]);
         setSelectedSheetIndices([]);
+        setSheetCosts({});
       } else {
         setParsedSheets(sheets);
         // Select all sheets by default
         setSelectedSheetIndices(sheets.map((_, i) => i));
         setActiveSheetTab(0);
+        
+        // Initialize costs from existing attendanceSheets if available
+        const initialCosts: Record<number, number> = {};
+        sheets.forEach((s, idx) => {
+          initialCosts[idx] = 0;
+        });
+        setSheetCosts(initialCosts);
       }
     } catch (err: any) {
       setErrorMsg(`读取Excel文件出错: ${err?.message || '文件损坏或格式不支持'}`);
@@ -86,6 +95,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     const attendanceSheetsToImport: ClassMonthlyAttendance[] = selectedSheetIndices.map((idx) => {
       const parsed = parsedSheets[idx];
       const matchingClass = classTypes.find((c) => c.className === parsed.className);
+      const cost = sheetCosts[idx] || 0;
 
       return {
         id: `att-${selectedMonth}-${parsed.className}`,
@@ -93,6 +103,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
         className: parsed.className,
         subject: matchingClass?.subject || '综合科目',
         totalLessonColumns: parsed.totalLessons,
+        classCost: cost,
         rows: parsed.rows,
         isSettled: true,
         updatedAt: new Date().toLocaleString()
@@ -244,14 +255,33 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             {/* Selected Sheet Content Table Preview */}
             {activeSheet && (
               <div className="flex-1 border border-slate-200 rounded-xl overflow-hidden flex flex-col bg-slate-50/50">
-                <div className="p-3 bg-white border-b border-slate-200 flex justify-between items-center text-xs">
+                <div className="p-3 bg-white border-b border-slate-200 flex flex-wrap justify-between items-center text-xs gap-2">
                   <span className="font-bold text-slate-800 flex items-center">
                     <Users className="w-4 h-4 text-indigo-600 mr-1.5" />
-                    当前Sheet预览: <span className="text-indigo-600 ml-1">{activeSheet.className}</span>
+                    当前Sheet预览: <span className="text-indigo-600 ml-1 mr-3">{activeSheet.className}</span>
+                    <span className="text-slate-500 font-normal">
+                      (学员: <strong className="text-slate-900">{activeSheet.rows.length}</strong> 人 | 列数: <strong className="text-slate-900">{activeSheet.totalLessons}</strong> 节)
+                    </span>
                   </span>
-                  <span className="text-slate-500">
-                    学员: <strong className="text-slate-900">{activeSheet.rows.length}</strong> 人 | 列数: <strong className="text-slate-900">{activeSheet.totalLessons}</strong> 节
-                  </span>
+
+                  {/* Class Cost Input for active sheet */}
+                  <div className="flex items-center space-x-1 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl">
+                    <span className="text-amber-800 font-bold text-[11px]">【{activeSheet.className}】本月成本:</span>
+                    <span className="text-amber-600 font-bold ml-1">¥</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={sheetCosts[activeSheetTab] === 0 || sheetCosts[activeSheetTab] === undefined ? '' : sheetCosts[activeSheetTab]}
+                      onChange={(e) => {
+                        const val = Math.max(0, Number(e.target.value));
+                        setSheetCosts((prev) => ({ ...prev, [activeSheetTab]: val }));
+                      }}
+                      placeholder="0"
+                      className="w-20 bg-white border border-amber-300 rounded px-1.5 py-0.5 font-bold text-amber-900 focus:outline-none text-right"
+                    />
+                    <span className="text-slate-400 text-[10px] ml-1">(也可导入后随时修改)</span>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-auto p-2">

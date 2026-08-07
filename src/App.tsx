@@ -195,6 +195,35 @@ export default function App() {
     });
   };
 
+  // Handler for Updating Class Monthly Cost Anytime
+  const handleUpdateClassCost = (month: string, className: string, cost: number) => {
+    setAttendanceSheets((prev) => {
+      const index = prev.findIndex(
+        (s) => s.month === month && s.className === className
+      );
+      if (index >= 0) {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], classCost: cost, updatedAt: new Date().toLocaleString() };
+        return updated;
+      } else {
+        const classStudents = students.filter((s) => s.className === className);
+        const subject = classStudents[0]?.subject || '综合科目';
+        const newSheet: ClassMonthlyAttendance = {
+          id: `att-${month}-${className}`,
+          month,
+          className,
+          subject,
+          totalLessonColumns: 18,
+          classCost: cost,
+          rows: [],
+          isSettled: true,
+          updatedAt: new Date().toLocaleString()
+        };
+        return [newSheet, ...prev];
+      }
+    });
+  };
+
   // Navigation Helper
   const handleNavigateTab = (tab: string, className?: string) => {
     if (className) {
@@ -229,6 +258,7 @@ export default function App() {
             classTypes={classTypes}
             selectedMonth={selectedMonth}
             onNavigateTab={handleNavigateTab}
+            onUpdateClassCost={handleUpdateClassCost}
           />
         )}
 
@@ -243,6 +273,7 @@ export default function App() {
             onSaveSheet={handleSaveAttendanceSheet}
             onSaveMultipleSheets={handleSaveMultipleSheets}
             onNavigateTab={handleNavigateTab}
+            onUpdateClassCost={handleUpdateClassCost}
           />
         )}
 

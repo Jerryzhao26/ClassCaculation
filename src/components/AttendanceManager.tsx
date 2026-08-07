@@ -36,6 +36,7 @@ interface AttendanceManagerProps {
   onSaveSheet: (sheet: ClassMonthlyAttendance) => void;
   onSaveMultipleSheets?: (sheets: ClassMonthlyAttendance[]) => void;
   onNavigateTab: (tab: string) => void;
+  onUpdateClassCost?: (month: string, className: string, cost: number) => void;
 }
 
 export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
@@ -47,7 +48,8 @@ export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   setCurrentClassName,
   onSaveSheet,
   onSaveMultipleSheets,
-  onNavigateTab
+  onNavigateTab,
+  onUpdateClassCost
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -436,6 +438,7 @@ export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
               <div className="flex flex-col">
                 <label className="text-[11px] text-amber-300 font-bold flex items-center mb-0.5">
                   <span>2. 班级本月总成本(元)</span>
+                  <span className="text-[10px] text-indigo-300 font-normal ml-1">(后置/随时输入)</span>
                 </label>
                 <div className="flex items-center bg-slate-900 border border-amber-400/50 rounded-lg px-2 py-1">
                   <span className="text-xs text-amber-400 font-bold mr-1">¥</span>
@@ -444,7 +447,13 @@ export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
                     min="0"
                     step="100"
                     value={classCost === 0 ? '' : classCost}
-                    onChange={(e) => setClassCost(Math.max(0, Number(e.target.value)))}
+                    onChange={(e) => {
+                      const newCost = Math.max(0, Number(e.target.value));
+                      setClassCost(newCost);
+                      if (onUpdateClassCost) {
+                        onUpdateClassCost(selectedMonth, currentClassName, newCost);
+                      }
+                    }}
                     placeholder="请输入成本"
                     className="w-28 bg-transparent text-sm font-black text-amber-300 focus:outline-none"
                   />

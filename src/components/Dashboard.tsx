@@ -16,8 +16,10 @@ import {
   Calendar,
   Send,
   Copy,
-  Check
+  Check,
+  Edit3
 } from 'lucide-react';
+import { ClassCostBatchModal } from './ClassCostBatchModal';
 import {
   BarChart,
   Bar,
@@ -35,6 +37,7 @@ interface DashboardProps {
   classTypes: ClassTypeConfig[];
   selectedMonth: string;
   onNavigateTab: (tab: string, className?: string) => void;
+  onUpdateClassCost: (month: string, className: string, cost: number) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -42,9 +45,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   attendanceSheets,
   classTypes,
   selectedMonth,
-  onNavigateTab
+  onNavigateTab,
+  onUpdateClassCost
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isCostModalOpen, setIsCostModalOpen] = useState(false);
 
   // Active students only
   const activeStudents = students.filter((s) => s.status === 'active');
@@ -383,15 +388,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <h3 className="font-bold text-slate-900 text-lg">各班级 {selectedMonth} 课销核算表</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              汇总各班级报名人数、消课节数、消课金额与剩余资金池
+              汇总各班级报名人数、消课节数、消课金额、本月运营成本与实际净收益
             </p>
           </div>
-          <button
-            onClick={() => onNavigateTab('attendance')}
-            className="text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl transition self-start sm:self-auto"
-          >
-            录入/编辑考勤记录
-          </button>
+          <div className="flex items-center space-x-2.5 self-start sm:self-auto">
+            <button
+              onClick={() => setIsCostModalOpen(true)}
+              className="text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+            >
+              <Coins className="w-3.5 h-3.5 text-amber-600" />
+              <span>录入/修改各班成本</span>
+            </button>
+            <button
+              onClick={() => onNavigateTab('attendance')}
+              className="text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl transition"
+            >
+              录入/编辑考勤记录
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -403,7 +417,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <th className="py-3.5 px-4 text-center">班级人数</th>
                 <th className="py-3.5 px-4 text-center">本月消课总节数</th>
                 <th className="py-3.5 px-4 text-right">课销核算毛额</th>
-                <th className="py-3.5 px-4 text-right text-amber-700">班级本月总成本</th>
+                <th className="py-3.5 px-4 text-right text-amber-800 font-bold bg-amber-50/40 min-w-[150px]">
+                  班级本月总成本 (点击修改)
+                </th>
                 <th className="py-3.5 px-4 text-right text-emerald-700 font-black">实际净收入</th>
                 <th className="py-3.5 px-4 text-center">剩余总课时</th>
                 <th className="py-3.5 px-4 text-right">剩余资金储备</th>
@@ -424,9 +440,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <td className="py-4 px-4 text-right font-extrabold text-indigo-600 text-base">
                     ¥{cls.totalConsumptionAmount.toLocaleString()}
                   </td>
-                  <td className="py-4 px-4 text-right font-bold text-amber-600">
-                    -¥{cls.classCost.toLocaleString()}
+                  
+                  {/* Inline Cost Editor */}
+                  <td className="py-3.5 px-4 text-right bg-amber-50/20">
+                    <div className="inline-flex items-center space-x-1 bg-amber-50/80 hover:bg-amber-100/80 border border-amber-300 rounded-lg px-2 py-1 transition focus-within:ring-2 focus-within:ring-amber-500">
+                      <span className="text-xs text-amber-700 font-bold">¥</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={cls.classCost === 0 ? '' : cls.classCost}
+                        onChange={(e) =>
+                          onUpdateClassCost(
+                            selectedMonth,
+                            cls.className,
+                            Math.max(0, Number(e.target.value))
+                          )
+                        }
+                        placeholder="0"
+                        className="w-20 bg-transparent text-sm font-bold text-amber-900 text-right focus:outline-none"
+                        title="点击直接输入或修改成本"
+                      />
+                    </div>
                   </td>
+
                   <td className={`py-4 px-4 text-right font-black text-base ${cls.netIncome >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     ¥{cls.netIncome.toLocaleString()}
                   </td>
@@ -479,6 +516,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Batch Cost Modal */}
+      <ClassCostBatchModal
+        isOpen={isCostModalOpen}
+        onClose={() => setIsCostModalOpen(false)}
+        selectedMonth={selectedMonth}
+        classTypes={classTypes}
+        students={students}
+        attendanceSheets={attendanceSheets}
+        onUpdateClassCost={onUpdateClassCost}
+      />
     </div>
   );
 };
