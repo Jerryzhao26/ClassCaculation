@@ -80,16 +80,16 @@ export const ClassCostBatchModal: React.FC<ClassCostBatchModalProps> = ({
             <thead className="bg-slate-100 font-bold text-slate-700 sticky top-0 z-10">
               <tr>
                 <th className="py-3 px-4">班级名称</th>
-                <th className="py-3 px-4 text-center">班级学生人数</th>
+                <th className="py-3 px-4 text-center">本月上课人数</th>
                 <th className="py-3 px-4 text-right">课销毛额 (已消课)</th>
                 <th className="py-3 px-4 text-center min-w-[160px]">本月总成本 (元)</th>
                 <th className="py-3 px-4 text-right font-black text-emerald-700">实际净收益</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-              {classSummaries.map((cls) => {
+              {classSummaries.map((cls, idx) => {
                 return (
-                  <tr key={cls.className} className="hover:bg-slate-50">
+                  <tr key={`${cls.className}-${idx}`} className="hover:bg-slate-50">
                     <td className="py-3 px-4 font-bold text-slate-900">{cls.className}</td>
                     <td className="py-3 px-4 text-center text-slate-600">{cls.studentCount} 人</td>
                     <td className="py-3 px-4 text-right font-bold text-indigo-600">

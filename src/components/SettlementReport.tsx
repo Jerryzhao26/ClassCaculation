@@ -226,7 +226,7 @@ export const SettlementReport: React.FC<SettlementReportProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-200 font-medium text-slate-800">
               {settlements.map((item, index) => (
-                <tr key={`${item.studentName}-${item.className}`} className="hover:bg-slate-50 transition">
+                <tr key={`${item.studentId || item.studentName}-${item.className}-${index}`} className="hover:bg-slate-50 transition">
                   <td className="py-3.5 px-4 text-center text-slate-400 font-mono border-r border-slate-200">
                     {index + 1}
                   </td>

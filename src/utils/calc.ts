@@ -48,7 +48,7 @@ export function calculateStudentSettlement(
 
   const unitPrice = student.unitPrice || (student.totalLessons > 0 ? student.tuitionFee / student.totalLessons : 0);
   const monthConsumptionAmount = monthDeductCount * unitPrice;
-  const remainingLessons = Math.max(0, student.totalLessons - cumulativeConsumed);
+  const remainingLessons = student.totalLessons - cumulativeConsumed;
   const remainingBalance = remainingLessons * unitPrice;
   const isLowBalance = remainingLessons <= 3;
 
@@ -107,10 +107,30 @@ export function calculateClassSummary(
   const roundedConsumption = Math.round(totalConsumptionAmount * 100) / 100;
   const netIncome = Math.round((roundedConsumption - classCost) * 100) / 100;
 
+  // Calculate actual student count attending THIS MONTH (本月上课人数)
+  let studentCount = 0;
+  if (targetSheet && targetSheet.rows && targetSheet.rows.length > 0) {
+    // Count unique students listed on this month's attendance sheet
+    const uniqueSheetStudents = new Set(
+      targetSheet.rows.map((r) => r.studentName.trim()).filter(Boolean)
+    );
+    studentCount = uniqueSheetStudents.size;
+  } else {
+    // If no attendance sheet exists for targetMonth yet, filter active students with records or remaining lessons
+    const monthAttendingStudents = classStudents.filter((s) => {
+      const settlement = calculateStudentSettlement(s, targetMonth, allAttendanceSheets);
+      if (settlement.monthDeductCount > 0 || settlement.monthPresentCount > 0 || settlement.monthAbsentCount > 0) {
+        return true;
+      }
+      return s.status === 'active' && settlement.remainingLessons > 0;
+    });
+    studentCount = monthAttendingStudents.length;
+  }
+
   return {
     className,
     subject,
-    studentCount: classStudents.length,
+    studentCount,
     totalPresentCount,
     totalDeductCount,
     totalConsumptionAmount: roundedConsumption,

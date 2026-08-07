@@ -210,11 +210,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
 
   // Refund Action
   const handleOpenRefund = (student: StudentEnrollment) => {
-    const settlement = calculateStudentSettlement(student, selectedMonth, attendanceSheets);
-    if (settlement.remainingLessons <= 0) {
-      alert(`学员【${student.studentName}】当前剩余课时为 0 节，已被清零或无剩余学费。`);
-      return;
-    }
     setRefundTarget(student);
     setShowRefundModal(true);
   };
@@ -224,22 +219,21 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
 
     const settlement = calculateStudentSettlement(refundTarget, selectedMonth, attendanceSheets);
     const consumed = settlement.cumulativeConsumedLessons;
-    const refundLessons = settlement.remainingLessons;
-    const refundBalance = settlement.remainingBalance;
+    const refundLessons = Math.max(0, settlement.remainingLessons);
+    const refundBalance = Math.max(0, settlement.remainingBalance);
 
     const newTuitionFee = Math.round(consumed * refundTarget.unitPrice * 100) / 100;
     const updated: StudentEnrollment = {
       ...refundTarget,
-      totalLessons: consumed, // 将总购课次调整为已核销课时，剩余课时自动归零
+      totalLessons: consumed, // 将总购课次调整为实际已消课时，剩余归零
       tuitionFee: newTuitionFee, // 缴纳学费调整为已销学费
       status: 'graduated', // 标记为结清/退费
-      note: `${refundTarget.note || ''} (于${new Date().toLocaleDateString()}办理缺勤退费: 清退剩余${refundLessons}节课时，应退款¥${refundBalance})`.trim()
+      note: `${refundTarget.note || ''} (于${new Date().toLocaleDateString()}办理结清退费: 清退剩余${refundLessons}节课时，应退款¥${refundBalance})`.trim()
     };
 
     onUpdateStudent(updated);
     setShowRefundModal(false);
     setRefundTarget(null);
-    alert(`已成功为【${refundTarget.studentName}】办理缺勤退费！\n清退剩余 ${refundLessons} 节课时，退款金额 ¥${refundBalance.toLocaleString()} 元，剩余课时与学费已归零。`);
   };
 
   // Filter students
@@ -358,11 +352,11 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {filteredStudents.map((student) => {
+              {filteredStudents.map((student, idx) => {
                 const settlement = calculateStudentSettlement(student, selectedMonth, attendanceSheets);
 
                 return (
-                  <tr key={student.id} className="hover:bg-slate-50/80 transition">
+                  <tr key={`${student.id}-${idx}`} className="hover:bg-slate-50/80 transition">
                     <td className="py-4 px-6 font-bold text-slate-900">
                       <div className="flex items-center space-x-2">
                         <span>{student.studentName}</span>
@@ -403,7 +397,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                     <td className="py-4 px-4 text-center">
                       <span
                         className={`font-black text-sm px-2 py-0.5 rounded ${
-                          settlement.remainingLessons <= 3
+                          settlement.remainingLessons < 0
+                            ? 'bg-rose-100 text-rose-800 border border-rose-300 font-extrabold'
+                            : settlement.remainingLessons <= 3
                             ? 'bg-amber-100 text-amber-900 border border-amber-200'
                             : 'text-slate-900'
                         }`}
@@ -709,7 +705,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
               </div>
 
               <div className="p-3.5 bg-rose-50 rounded-xl border border-rose-200/80 text-rose-800 text-xs leading-relaxed font-medium">
-                点击确认退费后，系统将把该学员购买总课次调整为实际已消课时（<strong>{settlement.cumulativeConsumedLessons}节</strong>），将剩余课时（<strong>{settlement.remainingLessons}节</strong>）与剩余学费池（<strong>¥{settlement.remainingBalance.toLocaleString()}</strong>）彻底清零归零。
+                点击确认退费后，系统将把该学员购买总课次调整为实际已消课时（<strong>{settlement.cumulativeConsumedLessons}节</strong>），将剩余课时与剩余学费池彻底结清归零。
               </div>
 
               <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2 text-xs text-slate-700">
@@ -730,12 +726,12 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                   <span className="font-bold text-emerald-600">{settlement.cumulativeConsumedLessons} 节 (对应课销学费 ¥{Math.round(settlement.cumulativeConsumedLessons * refundTarget.unitPrice)})</span>
                 </div>
                 <div className="flex justify-between items-center border-t border-slate-200 pt-2 font-bold">
-                  <span className="text-rose-700 font-extrabold">拟清退剩余课时:</span>
+                  <span className="text-rose-700 font-extrabold">当前剩余/超销课时:</span>
                   <span className="text-rose-700 font-extrabold text-sm">{settlement.remainingLessons} 节</span>
                 </div>
                 <div className="flex justify-between items-center bg-rose-100/70 p-2.5 rounded-lg border border-rose-200">
                   <span className="text-rose-900 font-black text-xs">拟退还学费总额:</span>
-                  <span className="text-rose-700 font-black text-lg">¥{settlement.remainingBalance.toLocaleString()} 元</span>
+                  <span className="text-rose-700 font-black text-lg">¥{Math.max(0, settlement.remainingBalance).toLocaleString()} 元</span>
                 </div>
               </div>
 

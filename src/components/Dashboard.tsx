@@ -84,6 +84,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     calculateClassSummary(cName, selectedMonth, activeStudents, attendanceSheets)
   );
 
+  const totalMonthAttendingStudents = classSummaries.reduce((sum, c) => sum + c.studentCount, 0);
+
   const totalClassCost = classSummaries.reduce((sum, c) => sum + c.classCost, 0);
   const totalNetIncome = totalConsumptionAmount - totalClassCost;
 
@@ -121,7 +123,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               全校课销与月度考勤结算大盘
             </h2>
             <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              本月共有 <span className="font-semibold text-white">{activeStudents.length}</span> 名学生在读，
+              本月共有 <span className="font-semibold text-white">{totalMonthAttendingStudents}</span> 名学员在本月上课，
               <span className="font-semibold text-white">{classSummaries.length}</span> 个班型课程。自动根据单次课价与实际考勤出勤次数核算阶段收入。
             </p>
           </div>
@@ -325,9 +327,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
               {lowBalanceStudents.length > 0 ? (
-                lowBalanceStudents.map((item) => (
+                lowBalanceStudents.map((item, index) => (
                   <div
-                    key={`${item.studentName}-${item.className}`}
+                    key={`${item.studentId || item.studentName}-${item.className}-${index}`}
                     className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/60 flex items-center justify-between"
                   >
                     <div>
@@ -414,7 +416,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <tr className="bg-slate-50 border-b border-slate-200/80 text-xs text-slate-500 font-semibold uppercase tracking-wider">
                 <th className="py-3.5 px-6">班级名称</th>
                 <th className="py-3.5 px-4">所属科目</th>
-                <th className="py-3.5 px-4 text-center">班级人数</th>
+                <th className="py-3.5 px-4 text-center">本月上课人数</th>
                 <th className="py-3.5 px-4 text-center">本月消课总节数</th>
                 <th className="py-3.5 px-4 text-right">课销核算毛额</th>
                 <th className="py-3.5 px-4 text-right text-amber-800 font-bold bg-amber-50/40 min-w-[150px]">
@@ -427,8 +429,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {classSummaries.map((cls) => (
-                <tr key={cls.className} className="hover:bg-slate-50/80 transition">
+              {classSummaries.map((cls, index) => (
+                <tr key={`${cls.className}-${index}`} className="hover:bg-slate-50/80 transition">
                   <td className="py-4 px-6 font-bold text-slate-900">{cls.className}</td>
                   <td className="py-4 px-4">
                     <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-md">
